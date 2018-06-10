@@ -53,13 +53,12 @@
 
 Ajax代码封装示例：
 
-    function ajaxHandle() {
-        let xhr = null;
+    function ajaxHandle(method,url,urlParam,successFunc) {
 
-        /**
-         *  @description 兼容ie6以下
-         */
+        //创建对象，并且兼容IE6下
+        let xhr = null;
         try {
+        //代码尝试执行这个块中的内容，如果有错误则会执行catch，并且传入错误信息参数
             xhr = new XMLHttpRequest();
         } catch (e) {
             xhr = new ActiveXObject('Microsoft,XMLHTTP');
@@ -69,14 +68,24 @@ Ajax代码封装示例：
          *  @description    异步形式打开数据
          *  @param          打开方式
          *  @param          打开地址
-         *  @param          是否异步
-         *  @code           new Date().getTime()是用于清除缓存
+         *  @param          是否异步，true是异步，false是同步
+         *  @code           new Date().getTime()是用于清除缓存；'getAjax.php?username=leo&age=12&'+new Date().getTime()
+         *  @code           encodeURI()是用于转码；'getAjax.php?username='+encodeURI('小明')+'&age=12&'+new Date().getTime()
          */
 
-        xhr.open('get','getAjax.php',true);
+        if (method === 'get' && urlParam){
+                url += '?' + urlParam;
+            }
+
+        xhr.open(method,url,true);
 
         //发送数据
-        xhr.send();
+        if(method === 'get'){
+            xhr.send();
+        }else {
+            xhr.setRequestHeader('content-type','application/x-www-form-urlencoded');
+            xhr.send(urlParam);
+        }
 
         /**
          *  @description 等待服务器返回内容
@@ -102,17 +111,35 @@ Ajax代码封装示例：
                         responseXML：返回XML形式的内容
                      */
                     let data = JSON.parse(xhr.responseText);
-
                     console.log(data);
-                    let list = document.getElementById('list');
-                    let html = '';
-                    for (let i = 0;i < data.length;i++){
-                        html += '<li><a href="javascript:;"> ' + data[i].title + ' </a>[<span>' + data[i].time + '</span>]</li>';
-                    }
-                    list.innerHTML = html;
+
+                    //回调函数
+                    successFunc && successFunc(data);
                 } else {
                     console.log('出错了，错误信息：' + xhr.status);
                 }
             }
         };
     };
+
+
+# JSONP
+
+JSONP : JSON with Padding
+
+JSONP实现跨域请求的原理：在资源加载进来之前先声明一个函数，这个函数接收一个参数（数据），利用函数参数去实现UI呈现。然后动态创建script标签，利用script标签的src不受同源策略约束来跨域获取数据。
+
+代码示例：
+
+    <script>
+    //回调函数，script动态创建后执行
+    function fn1(data) {
+        console.log(data);
+    }
+    window.onload = function () {
+        let value = 'script';
+        let oScript = document.createElement('script');
+        oScript.src = 'http://api.douban.com/book/subjects?q='+ value +'&alt=xd&callback=fn1';
+        document.body.appendChild(oScript);
+    }
+    </script>
